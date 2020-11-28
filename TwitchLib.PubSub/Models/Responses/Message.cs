@@ -29,6 +29,9 @@ namespace TwitchLib.PubSub.Models.Responses
             var encodedJsonMessage = json.SelectToken("message").ToString();
             switch (Topic?.Split('.')[0])
             {
+                case "hype-train-events-v1":
+                    MessageData = new HypeTrainEvents(encodedJsonMessage);
+                    break;
                 case "chat_moderator_actions":
                     MessageData = new ChatModeratorActions(encodedJsonMessage);
                     break;

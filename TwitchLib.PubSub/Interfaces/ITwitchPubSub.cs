@@ -1,5 +1,6 @@
 ﻿using System;
 using TwitchLib.PubSub.Events;
+using TwitchLib.PubSub.Models.Responses.Messages;
 
 namespace TwitchLib.PubSub.Interfaces
 {
@@ -8,6 +9,14 @@ namespace TwitchLib.PubSub.Interfaces
     /// </summary>
     public interface ITwitchPubSub
     {
+        /// <summary>
+        /// Fires when PubSub receives notice a hype train leveled up
+        /// </summary>
+        event EventHandler<HypeTrainEvents> OnHypeTrainLevelUp;
+        /// <summary>
+        /// Fires when PubSub receives notice a hype train progress changed
+        /// </summary>
+        event EventHandler<HypeTrainEvents> OnHypeTrainProgress;
         /// <summary>
         /// Occurs when [on ban].
         /// </summary>
@@ -51,7 +60,7 @@ namespace TwitchLib.PubSub.Interfaces
         /// <summary>
         /// Occurs when [on message deleted].
         /// </summary>
-        event EventHandler<OnMessageDeletedArgs> OnMessageDeleted; 
+        event EventHandler<OnMessageDeletedArgs> OnMessageDeleted;
         /// <summary>
         /// Occurs when [on listen response].
         /// </summary>
@@ -147,7 +156,7 @@ namespace TwitchLib.PubSub.Interfaces
         /// <summary>
         /// Occurs when [on raid go]
         /// </summary>
-        event EventHandler<OnRaidGoArgs> OnRaidGo; 
+        event EventHandler<OnRaidGoArgs> OnRaidGo;
         /// <summary>
         /// Occurs when [on log].
         /// </summary>
@@ -166,6 +175,11 @@ namespace TwitchLib.PubSub.Interfaces
         /// </summary>
         /// <param name="channelTwitchId">The channel twitch identifier.</param>
         void ListenToBitsEvents(string channelTwitchId);
+        /// <summary>
+        /// Listens to hype train events.
+        /// </summary>
+        /// <param name="channelTwitchId">The channel twitch identifier.</param>
+        void ListenToHypeTrainEvents(string channelTwitchId)
         /// <summary>
         /// Listens to extension channel broadcast messages.
         /// </summary>

@@ -61,6 +61,14 @@ namespace TwitchLib.PubSub
         private readonly Dictionary<string, string> _topicToChannelId = new Dictionary<string, string>();
 
         #region Events
+        /// <summary>
+        /// Fires when PubSub receives notice a hype train leveled up
+        /// </summary>
+        public event EventHandler<HypeTrainEvents> OnHypeTrainLevelUp;
+        /// <summary>
+        /// Fires when PubSub receives notice a hype train progress changed
+        /// </summary>
+        public event EventHandler<HypeTrainEvents> OnHypeTrainProgress;
         /// <inheritdoc />
         /// <summary>
         /// Fires when PubSub Service is connected.
@@ -408,6 +416,13 @@ namespace TwitchLib.PubSub
                     channelId = channelId ?? "";
                     switch (msg.Topic.Split('.')[0])
                     {
+                        case "hype-train-events-v1":
+                            var hypetrain = msg.MessageData as HypeTrainEvents;
+                            if (hypetrain.Type == HypeTrainEvents.HypeTrainType.HypeTrainLevelUp)
+                                OnHypeTrainLevelUp?.Invoke(this, hypetrain);
+                            else
+                                OnHypeTrainProgress?.Invoke(this, hypetrain);
+                            return;
                         case "channel-subscribe-events-v1":
                             var subscription = msg.MessageData as ChannelSubscription;
                             OnChannelSubscription?.Invoke(this, new OnChannelSubscriptionArgs { Subscription = subscription, ChannelId = channelId });
@@ -537,7 +552,7 @@ namespace TwitchLib.PubSub
                             }
                             break;
                         case "following":
-                            var f = (Following) msg.MessageData;
+                            var f = (Following)msg.MessageData;
                             f.FollowedChannelId = msg.Topic.Split('.')[1];
                             OnFollow?.Invoke(this, new OnFollowArgs { FollowedChannelId = f.FollowedChannelId, DisplayName = f.DisplayName, UserId = f.UserId, Username = f.Username });
                             return;
@@ -549,7 +564,7 @@ namespace TwitchLib.PubSub
                                     OnRewardRedeemed?.Invoke(this, new OnRewardRedeemedArgs { TimeStamp = cpc.TimeStamp, ChannelId = cpc.ChannelId, Login = cpc.Login, DisplayName = cpc.DisplayName, Message = cpc.Message, RewardId = cpc.RewardId, RewardTitle = cpc.RewardTitle, RewardPrompt = cpc.RewardPrompt, RewardCost = cpc.RewardCost, Status = cpc.Status, RedemptionId = cpc.RedemptionId });
                                     return;
                                 case CommunityPointsChannelType.CustomRewardUpdated:
-                                    OnCustomRewardUpdated?.Invoke(this, new OnCustomRewardUpdatedArgs { TimeStamp = cpc.TimeStamp, ChannelId =  cpc.ChannelId, RewardId = cpc.RewardId, RewardTitle = cpc.RewardTitle, RewardPrompt = cpc.RewardPrompt, RewardCost = cpc.RewardCost });
+                                    OnCustomRewardUpdated?.Invoke(this, new OnCustomRewardUpdatedArgs { TimeStamp = cpc.TimeStamp, ChannelId = cpc.ChannelId, RewardId = cpc.RewardId, RewardTitle = cpc.RewardTitle, RewardPrompt = cpc.RewardPrompt, RewardCost = cpc.RewardCost });
                                     return;
                                 case CommunityPointsChannelType.CustomRewardCreated:
                                     OnCustomRewardCreated?.Invoke(this, new OnCustomRewardCreatedArgs { TimeStamp = cpc.TimeStamp, ChannelId = cpc.ChannelId, RewardId = cpc.RewardId, RewardTitle = cpc.RewardTitle, RewardPrompt = cpc.RewardPrompt, RewardCost = cpc.RewardCost });
@@ -576,10 +591,10 @@ namespace TwitchLib.PubSub
                             switch (r?.Type)
                             {
                                 case RaidType.RaidUpdate:
-                                    OnRaidUpdate?.Invoke(this, new OnRaidUpdateArgs{ Id = r.Id, ChannelId = r.ChannelId , TargetChannelId = r.TargetChannelId, AnnounceTime = r.AnnounceTime, RaidTime = r.RaidTime, RemainingDurationSeconds = r.RemainigDurationSeconds, ViewerCount = r.ViewerCount });
+                                    OnRaidUpdate?.Invoke(this, new OnRaidUpdateArgs { Id = r.Id, ChannelId = r.ChannelId, TargetChannelId = r.TargetChannelId, AnnounceTime = r.AnnounceTime, RaidTime = r.RaidTime, RemainingDurationSeconds = r.RemainigDurationSeconds, ViewerCount = r.ViewerCount });
                                     return;
                                 case RaidType.RaidUpdateV2:
-                                    OnRaidUpdateV2?.Invoke(this, new OnRaidUpdateV2Args{ Id = r.Id, ChannelId = r.ChannelId, TargetChannelId = r.TargetChannelId, TargetLogin = r.TargetLogin, TargetDisplayName = r.TargetDisplayName, TargetProfileImage = r.TargetProfileImage, ViewerCount = r.ViewerCount });
+                                    OnRaidUpdateV2?.Invoke(this, new OnRaidUpdateV2Args { Id = r.Id, ChannelId = r.ChannelId, TargetChannelId = r.TargetChannelId, TargetLogin = r.TargetLogin, TargetDisplayName = r.TargetDisplayName, TargetProfileImage = r.TargetProfileImage, ViewerCount = r.ViewerCount });
                                     return;
                                 case RaidType.RaidGo:
                                     OnRaidGo?.Invoke(this, new OnRaidGoArgs { Id = r.Id, ChannelId = r.ChannelId, TargetChannelId = r.TargetChannelId, TargetLogin = r.TargetLogin, TargetDisplayName = r.TargetDisplayName, TargetProfileImage = r.TargetProfileImage, ViewerCount = r.ViewerCount });
@@ -589,7 +604,7 @@ namespace TwitchLib.PubSub
                     }
                     break;
                 case "pong":
-                    _pongReceived = true; 
+                    _pongReceived = true;
                     return;
                 case "reconnect": _socket.Close(); break;
             }
@@ -736,6 +751,18 @@ namespace TwitchLib.PubSub
         public void ListenToBitsEvents(string channelTwitchId)
         {
             var topic = $"channel-bits-events-v1.{channelTwitchId}";
+            _topicToChannelId[topic] = channelTwitchId;
+            ListenToTopic(topic);
+        }
+        
+        /// <inheritdoc />
+        /// <summary>
+        /// Sends request to listenOn hype train events in specific channel
+        /// </summary>
+        /// <param name="channelTwitchId">Channel Id of channel to listen to bits on (can be fetched from TwitchApi)</param>
+        public void ListenToHypeTrainEvents(string channelTwitchId)
+        {
+            var topic = $"hype-train-events-v1.{channelTwitchId}";
             _topicToChannelId[topic] = channelTwitchId;
             ListenToTopic(topic);
         }
